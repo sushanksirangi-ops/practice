@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Portal</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; }
+        .auth-container { border: 1px solid #ccc; padding: 20px; border-radius: 8px; width: 300px; }
+        .toggle-btns { margin-bottom: 20px; display: flex; gap: 10px; }
+        .active { font-weight: bold; text-decoration: underline; color: blue; }
+        button[type="submit"] { width: 100%; margin-top: 10px; cursor: pointer; }
+        input { width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
+        #msg { margin-top: 15px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <div class="toggle-btns">
+        <span id="loginTab" class="active" onclick="switchMode('login')" style="cursor:pointer">Login</span>
+        <span id="registerTab" onclick="switchMode('register')" style="cursor:pointer">Register</span>
+    </div>
+
+    <h2 id="formTitle">Login</h2>
+    
+    <form id="authForm">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit" id="submitBtn">Login</button>
+    </form>
+
+    <p id="msg"></p>
+</div>
+
+<script>
+    let currentMode = 'login'; // Default mode
+    const authForm = document.getElementById("authForm");
+    const formTitle = document.getElementById("formTitle");
+    const submitBtn = document.getElementById("submitBtn");
+    const msg = document.getElementById("msg");
+
+    // Function to switch between Login and Register UI
+    function switchMode(mode) {
+        currentMode = mode;
+        msg.innerText = "";
+        
+        if (mode === 'login') {
+            formTitle.innerText = "Login";
+            submitBtn.innerText = "Login";
+            document.getElementById("loginTab").classList.add("active");
+            document.getElementById("registerTab").classList.remove("active");
+        } else {
+            formTitle.innerText = "Register";
+            submitBtn.innerText = "Register";
+            document.getElementById("registerTab").classList.add("active");
+            document.getElementById("loginTab").classList.remove("active");
+        }
+    }
+
+    authForm.onsubmit = async (e) => {
+        e.preventDefault();
+        msg.innerText = "Processing...";
+        
+        const formData = new FormData(authForm);
+        let url = "";
+        let options = {};
+
+        if (currentMode === 'register') {
+            // Register uses standard FormData (multipart/form-data)
+            url = "http://127.0.0.1:8000/register";
+            options = {
+                method: "POST",
+                body: formData
+            };
+        } else {
+            // Login (token) requires URLSearchParams (x-www-form-urlencoded)
+            url = "http://127.0.0.1:8000/token";
+            options = {
+                method: "POST",
+                body: new URLSearchParams(formData),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            };
+        }
+
+        try {
+            const response = await fetch(url, options);
+            const data = await response.json();
+
+            if (response.ok) {
+                if (currentMode === 'login') {
+                    msg.innerHTML = `<span style="color:green">✅ Login Successful!</span>`;
+                    console.log("Token:", data.access_token);
+                } else {
+                    msg.innerHTML = `<span style="color:green">✅ ${data.detail}</span>`;
+                }
+            } else {
+                msg.innerHTML = `<span style="color:red">❌ ${data.detail || "Error occurred"}</span>`;
+            }
+        } catch (error) {
+            msg.innerHTML = `<span style="color:red">❌ Connection failed</span>`;
+        }
+    };
+</script>
+
+</body>
+</html>
